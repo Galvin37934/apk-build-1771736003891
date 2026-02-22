@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iCamera 50x Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { background: black; overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #fff; cursor: pointer; border: 3px solid #000; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        .animate-in { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- ICON SVG ---
+        const IconCamera = () => <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>;
+        const IconZap = ({ on }) => <svg width="22" height="22" viewBox="0 0 24 24" fill={on ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+        const IconRefresh = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>;
+        const IconChevronLeft = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>;
+        const IconImage = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>;
+        const IconDownload = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>;
+        const IconShare = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>;
+        const IconHeart = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
+        const IconTrash = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>;
+        const IconMore = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>;
+        const IconSparkles = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"/></svg>;
+
+        const FRACTAL_GRIDS = [
+          { top: '87.5%', left: '0%', width: '12.5%', height: '12.5%' }, 
+          { top: '87.5%', left: '12.5%', width: '12.5%', height: '12.5%' },
+          { top: '75%', left: '0%', width: '12.5%', height: '12.5%' },   
+          { top: '75%', left: '12.5%', width: '12.5%', height: '12.5%' }, 
+          { top: '75%', left: '25%', width: '25%', height: '25%' },       
+          { top: '50%', left: '0%', width: '25%', height: '25%' },        
+          { top: '50%', left: '25%', width: '25%', height: '25%' },       
+          { top: '50%', left: '50%', width: '50%', height: '50%' },       
+          { top: '0%', left: '0%', width: '50%', height: '50%' },         
+          { top: '0%', left: '50%', width: '50%', height: '50%' }         
+        ];
+
+        const ZOOM_LEVELS = [1, 2, 5, 10, 20, 30, 50];
+
+        // --- API KEY BASE64 ---
+        const encodedKey = "QUl6YVN5QjNZSkQ2VzJQeUllN29lNFNYRExrUGdScU5SN0dnTHI4";
+        const apiKey = atob(encodedKey);
+
+        function App() {
+          const [isReady, setIsReady] = useState(false);
+          const [mode, setMode] = useState('PHOTO'); 
+          const [sliderVal, setSliderVal] = useState(0); 
+          const [prevZoom, setPrevZoom] = useState(1);
+          const [ev, setEv] = useState(0);
+          const [flash, setFlash] = useState(false);
+          const [focusPos, setFocusPos] = useState(null);
+          const [isZooming, setIsZooming] = useState(false); 
+          
+          const [actionFreeze, setActionFreeze] = useState(false);
+          const [showSettings, setShowSettings] = useState(false);
+          const [showRuler, setShowRuler] = useState(false);
+          const [watermark, setWatermark] = useState(true);
+
+          const [isProcessing, setIsProcessing] = useState(false);
+          const [frozenFrame, setFrozenFrame] = useState(null);
+          const [finalFrame, setFinalFrame] = useState(null); 
+          const [revealedCount, setRevealedCount] = useState(0); 
+          const [errorMsg, setErrorMsg] = useState(null);
+          
+          const [gallery, setGallery] = useState([]);
+          const [galleryIndex, setGalleryIndex] = useState(null); 
+          const [uiVisible, setUiVisible] = useState(true);
+          const [imgZoom, setImgZoom] = useState(1);
+          const [slideOffset, setSlideOffset] = useState(0);
+
+          const [aiInsight, setAiInsight] = useState(null);
+          const [isAnalyzing, setIsAnalyzing] = useState(false);
+          
+          const videoRef = useRef(null);
+          const trackRef = useRef(null);
+          
+          const lastY = useRef(0);
+          const touchStartY = useRef(0);
+          const touchStartX = useRef(0);
+          const currentX = useRef(0);
+          const tapTimer = useRef(null);
+          const isSwiping = useRef(false);
+          const rulerTimer = useRef(null);
+
+          const zoom = useMemo(() => {
+            const normalized = sliderVal / 100;
+            return 1 + Math.pow(normalized, 3) * 49;
+          }, [sliderVal]);
+
+          const zoomTransition = useMemo(() => {
+            const isZoomOut = zoom < prevZoom;
+            const easing = isZoomOut ? 'cubic-bezier(0.19, 1, 0.22, 1)' : 'cubic-bezier(0.27, 0, 0.22, 1)';
+            return `transform 700ms ${easing}`;
+          }, [zoom, prevZoom]);
+
+          const startCamera = async () => {
+            // --- FIX CEK SUPPORT KAMERA ---
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                setErrorMsg("Browser / WebView lu ga support kamera anjir!");
+                return;
+            }
+
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
+                audio: false
+              });
+              if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                trackRef.current = stream.getVideoTracks()[0];
+                videoRef.current.onloadedmetadata = () => {
+                  videoRef.current.play().catch(()=>{});
+                  setIsReady(true);
+                };
+              }
+            } catch (err) {
+              console.error("Camera Init Error:", err);
+              setErrorMsg(`Kamera gagal diakses: ${err.message}`);
+            }
+          };
+
+          useEffect(() => {
+            if (!trackRef.current || !isReady) return;
+            const timeout = setTimeout(() => {
+              try {
+                const track = trackRef.current;
+                if (typeof track.getCapabilities === 'function') {
+                  const cap = track.getCapabilities();
+                  const settings = {};
+                  if (cap.exposureCompensation) settings.exposureCompensation = ev;
+                  if (cap.torch) settings.torch = flash;
+                  if (Object.keys(settings).length > 0 && typeof track.applyConstraints === 'function') {
+                    track.applyConstraints({ advanced: [settings] }).catch(() => {});
+                  }
+                }
+              } catch (e) {}
+            }, 300);
+            return () => clearTimeout(timeout);
+          }, [flash, ev, isReady]);
+
+          const dismissOverlays = () => {
+            setShowSettings(false);
+            setShowRuler(false);
+          };
+
+          const handleZoomBtn = (z) => {
+            setPrevZoom(zoom);
+            setSliderVal(Math.cbrt((z - 1) / 49) * 100);
+            setShowRuler(true);
+            if (rulerTimer.current) clearTimeout(rulerTimer.current);
+            rulerTimer.current = setTimeout(() => setShowRuler(false), 3000);
+          };
+
+          const capture = async () => {
+            if (isProcessing || !isReady) return;
+            
+            const video = videoRef.current;
+            if (!video.videoWidth || !video.videoHeight) return; 
+
+            setIsProcessing(true);
+            setErrorMsg(null);
+            setRevealedCount(0);
+            setFinalFrame(null);
+            dismissOverlays();
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 1024;
+            canvas.height = (video.videoHeight / video.videoWidth) * 1024;
+
+            const sw = video.videoWidth / zoom;
+            const sh = video.videoHeight / zoom;
+            const sx = (video.videoWidth - sw) / 2;
+            const sy = (video.videoHeight - sh) / 2;
+
+            ctx.filter = `brightness(${1 + (ev * 0.1)}) contrast(1.1) saturate(1.1)`;
+            ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+            const originalB64 = canvas.toDataURL('image/jpeg', 0.85);
+
+            ctx.filter = `blur(40px) brightness(1.2)`;
+            ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+            setFrozenFrame(canvas.toDataURL('image/jpeg', 0.6));
+
+            const b64Data = originalB64.split(',')[1];
+            const prompt = "Enhance this image, improve sharpness, detail, and clarity.";
+
+            // --- FIX ERROR HANDLING AI SESUAI CHATGPT ---
+            try {
+              const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{
+                    parts: [
+                      { text: prompt },
+                      { inlineData: { mimeType: "image/jpeg", data: b64Data } }
+                    ]
+                  }],
+                  generationConfig: { responseModalities: ["IMAGE"] }
+                })
+              });
+
+              const data = await response.json();
+              console.log("Gemini response:", data);
+
+              if (data.error) throw new Error(data.error.message);
+
+              let aiBase64 = null;
+              if (data.candidates?.[0]?.content?.parts) {
+                  const parts = data.candidates[0].content.parts;
+                  const imagePart = parts.find(p => p.inlineData?.data);
+                  if (imagePart) aiBase64 = imagePart.inlineData.data;
+              }
+              
+              if (aiBase64) {
+                startRevealAnimation(`data:image/jpeg;base64,${aiBase64}`, 'SUCCESS');
+              } else {
+                throw new Error("Gemini gak balikin gambar njir.");
+              }
+            } catch (e) {
+              console.error("ERROR Njir:", e);
+              setErrorMsg(`⚠️ GAGAL: ${e.message}`);
+              startRevealAnimation(originalB64, 'FALLBACK');
+            }
+          };
+
+          const startRevealAnimation = (targetImage, status) => {
+            setFinalFrame(targetImage);
+            let step = 0;
+            const progressInterval = setInterval(() => {
+              step++;
+              setRevealedCount(step);
+              if (step >= 10) {
+                clearInterval(progressInterval);
+                setTimeout(() => {
+                  setGallery(prev => [{ url: targetImage, status }, ...prev]);
+                  setIsProcessing(false);
+                  setFrozenFrame(null);
+                  setFinalFrame(null);
+                }, 500); 
+              }
+            }, 180); 
+          };
+
+          const analyzeImage = async () => {
+            if (galleryIndex === null || !gallery[galleryIndex]) return;
+            setIsAnalyzing(true);
+            setAiInsight(null);
+            
+            try {
+              const base64Data = gallery[galleryIndex].url.split(',')[1];
+              const prompt = "Analisis foto ini. Ekstrak teks/angka yang ada di gambar secara jelas.";
+
+              const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{
+                    role: "user",
+                    parts: [{ text: prompt }, { inlineData: { mimeType: "image/jpeg", data: base64Data } }]
+                  }]
+                })
+              });
+
+              const data = await response.json();
+              if (data.error) throw new Error(data.error.message);
+
+              const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Gagal nganalisis.";
+              setAiInsight(text);
+            } catch (error) {
+              console.error("AI Text Error:", error);
+              setAiInsight(`Error: ${error.message}`);
+            } finally {
+              setIsAnalyzing(false);
+            }
+          };
+
+          const handleGalTouchStart = (e) => {
+            touchStartX.current = e.touches[0].clientX;
+            currentX.current = e.touches[0].clientX;
+            isSwiping.current = false;
+          };
+
+          const handleGalTouchMove = (e) => {
+            currentX.current = e.touches[0].clientX;
+            const diff = currentX.current - touchStartX.current;
+            if (Math.abs(diff) > 10) isSwiping.current = true;
+
+            if ((galleryIndex === 0 && diff > 0) || (galleryIndex === gallery.length - 1 && diff < 0)) {
+              setSlideOffset(diff / 3); 
+            } else {
+              setSlideOffset(diff);
+            }
+          };
+
+          const handleGalTouchEnd = () => {
+            const diff = currentX.current - touchStartX.current;
+            
+            if (isSwiping.current) {
+              if (diff > 50 && galleryIndex > 0) {
+                setGalleryIndex(galleryIndex - 1);
+                setAiInsight(null);
+              } else if (diff < -50 && galleryIndex < gallery.length - 1) {
+                setGalleryIndex(galleryIndex + 1);
+                setAiInsight(null);
+              }
+              setSlideOffset(0);
+              setImgZoom(1); 
+            } else {
+              if (tapTimer.current) {
+                clearTimeout(tapTimer.current);
+                tapTimer.current = null;
+                setImgZoom(prev => prev === 1 ? 2.5 : 1);
+                setSlideOffset(0);
+              } else {
+                tapTimer.current = setTimeout(() => {
+                  tapTimer.current = null;
+                  setUiVisible(prev => !prev);
+                }, 250);
+              }
+            }
+            isSwiping.current = false;
+          };
+
+          const deleteCurrentPhoto = () => {
+            const newGallery = gallery.filter((_, i) => i !== galleryIndex);
+            setGallery(newGallery);
+            setAiInsight(null);
+            if (newGallery.length === 0) {
+              setGalleryIndex(null);
+              setUiVisible(true);
+            } else if (galleryIndex >= newGallery.length) {
+              setGalleryIndex(newGallery.length - 1);
+            }
+            setImgZoom(1);
+          };
+
+          return (
+            <div className="h-screen w-screen bg-black text-white flex flex-col relative select-none overflow-hidden font-sans">
+              {!isReady && galleryIndex === null && (
+                <div className="absolute inset-0 z-[100] bg-black flex flex-col items-center justify-center p-12 text-center">
+                  <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-8 shadow-2xl text-zinc-500">
+                    <IconCamera />
+                  </div>
+                  <h1 className="text-4xl font-black mb-4 italic tracking-tighter uppercase">iCamera AI</h1>
+                  <button onClick={startCamera} className="w-full bg-blue-600 text-white font-black py-5 rounded-[2.5rem] active:scale-95 transition-all shadow-xl shadow-blue-900/40 uppercase tracking-widest text-sm">
+                    NYALAIN KAMERA
+                  </button>
+                </div>
+              )}
+
+              <div 
+                className="flex-1 relative overflow-hidden flex items-center justify-center bg-zinc-950" 
+                onTouchStart={(e) => {
+                  if (!isReady || isProcessing || galleryIndex !== null) return;
+                  setShowSettings(false);
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setFocusPos({ x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top });
+                  lastY.current = e.touches[0].clientY;
+                  setTimeout(() => setFocusPos(null), 2000);
+                }}
+                onTouchMove={(e) => {
+                  if (!focusPos || isProcessing || galleryIndex !== null) return;
+                  const delta = (lastY.current - e.touches[0].clientY) / 200;
+                  setEv(prev => Math.max(-2, Math.min(2, prev + delta)));
+                  lastY.current = e.touches[0].clientY;
+                }}
+              >
+                <video 
+                  ref={videoRef} playsInline muted autoPlay 
+                  className="absolute w-full h-full object-cover" 
+                  style={{ opacity: isReady && !isProcessing && galleryIndex === null ? 1 : 0, transform: `scale(${zoom})`, transition: zoomTransition }} 
+                />
+                
+                {isProcessing && frozenFrame && (
+            
